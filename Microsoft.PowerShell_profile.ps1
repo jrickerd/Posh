@@ -23,6 +23,28 @@ function global:TabExpansion {
   }
 }
 
+# set up posh-git:
+Import-Module posh-git
+
+$teBackup = 'posh-git_DefaultTabExpansion'
+if(!(Test-Path Function:\$teBackup)) {
+    Rename-Item Function:\TabExpansion $teBackup
+}
+
+# Set up tab expansion and include git expansion
+function TabExpansion($line, $lastWord) {
+    $lastBlock = [regex]::Split($line, '[|;]')[-1]
+    
+    switch -regex ($lastBlock) {
+        # Execute git tab completion for all git-related commands
+        'git (.*)' { GitTabExpansion $lastBlock }
+        # Fall back on existing tab expansion
+        default { & $teBackup $line $lastWord }
+    }
+}
+
+Enable-GitColors
+
 # This should go OUTSIDE the prompt function, it doesn't need re-evaluation
 # We're going to calculate a prefix for the window title 
 # Our basic title is "PoSh - C:\Your\Path\Here" showing the current path
@@ -52,6 +74,19 @@ function get-aliassuggestion {
 	$helpMatches
 }
 
+# Set up a simple prompt, adding the git prompt parts inside git repos
+#function prompt {
+#    # Reset color, which can be messed up by Enable-GitColors
+#    $Host.UI.RawUI.ForegroundColor = $GitPromptSettings.DefaultForegroundColor
+#
+#    Write-Host($pwd) -nonewline
+#        
+#    # Git Prompt
+#    $Global:GitStatus = Get-GitStatus
+#    Write-GitStatus $GitStatus
+#
+#    return "> "
+#}
 
 function prompt {
    # FIRST, make a note if there was an error in the previous command
